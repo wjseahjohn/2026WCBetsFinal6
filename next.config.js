@@ -1,34 +1,8 @@
-# dependencies
-/node_modules
-/.pnp
-.pnp.js
+// app/api/leaderboard/route.ts
+import { NextResponse } from 'next/server';
+import { getLeaderboard } from '@/lib/db';
 
-# testing
-/coverage
-
-# next.js
-/.next/
-/out/
-
-# production
-/build
-
-# misc
-.DS_Store
-*.pem
-
-# debug
-npm-debug.log*
-yarn-debug.log*
-yarn-error.log*
-
-# local env files
-.env*.local
-.env
-
-# vercel
-.vercel
-
-# typescript
-*.tsbuildinfo
-next-env.d.ts
+export async function GET() {
+  const leaderboard = await getLeaderboard();
+  return NextResponse.json(leaderboard);
+}

@@ -1,168 +1,135 @@
-'use client';
+/* app/globals.css */
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
 
-import { useState, useEffect } from 'react';
-import type { Match } from '@/lib/matches';
-import type { TournamentBet, TopScorerBet } from '@/lib/matches';
-
-interface AppData {
-  matches: Match[];
-  tournamentWinners: TournamentBet[];
-  topScorers: TopScorerBet[];
-  results: Record<string, string>;
+:root {
+  --pitch: #071f10;
+  --grass: #0d3d1c;
+  --grass-mid: #145c2a;
+  --grass-light: #1a7a38;
+  --gold: #f5c842;
+  --gold-dim: #c9a032;
+  --amber: #e8901a;
+  --red: #d93a2b;
+  --chalk: #f0ede4;
+  --chalk-dim: #b8b5ac;
+  --card-bg: rgba(255,255,255,0.05);
+  --card-border: rgba(255,255,255,0.10);
 }
 
-export default function AdminPage() {
-  const [adminKey, setAdminKey] = useState('');
-  const [authed, setAuthed] = useState(false);
-  const [data, setData] = useState<AppData | null>(null);
-  const [saving, setSaving] = useState<string | null>(null);
-  const [msg, setMsg] = useState('');
+* { box-sizing: border-box; margin: 0; padding: 0; }
 
-  useEffect(() => {
-    if (authed) {
-      fetch('/api/matches').then(r => r.json()).then(setData);
-    }
-  }, [authed]);
-
-  async function setResult(targetId: string, result: string, label: string) {
-    setSaving(targetId);
-    const res = await fetch('/api/matches', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ targetId, result, adminKey }),
-    });
-    setSaving(null);
-    if (res.ok) {
-      setMsg(`✅ Result set: ${label} → ${result}`);
-      const fresh = await fetch('/api/matches').then(r => r.json());
-      setData(fresh);
-      setTimeout(() => setMsg(''), 3000);
-    } else {
-      setMsg('❌ Failed. Check admin key.');
-    }
-  }
-
-  if (!authed) {
-    return (
-      <div className="min-h-screen pitch-bg flex items-center justify-center p-4">
-        <div className="card p-8 max-w-sm w-full text-center">
-          <h1 className="font-display text-3xl text-gold mb-6 tracking-wider">🔐 ADMIN</h1>
-          <input
-            type="password"
-            placeholder="Admin key..."
-            value={adminKey}
-            onChange={e => setAdminKey(e.target.value)}
-            className="w-full px-4 py-3 rounded-lg text-pitch mb-4"
-            style={{ background: 'var(--chalk)' }}
-          />
-          <button
-            onClick={() => { if (adminKey) setAuthed(true); }}
-            className="w-full py-3 rounded-lg font-display text-xl tracking-wider"
-            style={{ background: 'var(--gold)', color: 'var(--pitch)' }}
-          >
-            ENTER
-          </button>
-          <p className="text-xs text-chalk-dim mt-4">Set ADMIN_KEY in your Vercel environment variables</p>
-        </div>
-      </div>
+body {
+  font-family: var(--font-body), sans-serif;
+  background-color: var(--pitch);
+  color: var(--chalk);
+  min-height: 100vh;
+  background-image:
+    repeating-linear-gradient(
+      0deg,
+      transparent,
+      transparent 60px,
+      rgba(255,255,255,0.015) 60px,
+      rgba(255,255,255,0.015) 120px
     );
-  }
-
-  const GROUPS = ['A','B','C','D','E','F','G','H'];
-
-  return (
-    <div className="min-h-screen pitch-bg p-4 pb-16">
-      <div className="max-w-3xl mx-auto">
-        <h1 className="font-display text-4xl text-gold tracking-wider mb-2">⚙️ ADMIN PANEL</h1>
-        <p className="text-chalk-dim mb-6 text-sm">Set match results to auto-settle bets and update points</p>
-
-        {msg && (
-          <div className="mb-4 p-3 rounded-xl text-sm font-semibold" style={{ background: msg.startsWith('✅') ? 'rgba(74,222,128,0.15)' : 'rgba(248,113,113,0.15)', color: msg.startsWith('✅') ? '#4ade80' : '#f87171', border: `1px solid ${msg.startsWith('✅') ? 'rgba(74,222,128,0.3)' : 'rgba(248,113,113,0.3)'}` }}>
-            {msg}
-          </div>
-        )}
-
-        <h2 className="font-display text-2xl text-gold tracking-wider mb-4">MATCHES</h2>
-        {GROUPS.map(g => (
-          <div key={g} className="mb-6">
-            <h3 className="font-display text-lg text-chalk-dim mb-2 tracking-wider">GROUP {g}</h3>
-            <div className="space-y-2">
-              {data?.matches.filter(m => m.group === g).map(match => {
-                const result = data.results[match.id];
-                return (
-                  <div key={match.id} className="card p-3">
-                    <div className="flex items-center justify-between flex-wrap gap-2">
-                      <span className="text-sm font-semibold text-chalk">
-                        {match.homeFlag} {match.homeTeam} vs {match.awayFlag} {match.awayTeam}
-                      </span>
-                      {result ? (
-                        <span className="text-xs px-2 py-1 rounded-full bg-green-500/20 text-green-400 font-semibold">
-                          ✓ {result === 'home' ? match.homeTeam : result === 'away' ? match.awayTeam : 'Draw'}
-                        </span>
-                      ) : (
-                        <div className="flex gap-2">
-                          {(['home', 'draw', 'away'] as const).map(sel => (
-                            <button
-                              key={sel}
-                              onClick={() => setResult(match.id, sel, `${match.homeTeam} vs ${match.awayTeam}`)}
-                              disabled={saving === match.id}
-                              className="px-3 py-1 rounded-lg text-xs font-semibold text-pitch transition-all"
-                              style={{ background: sel === 'home' ? '#4ade80' : sel === 'draw' ? 'var(--gold)' : '#f87171' }}
-                            >
-                              {sel === 'home' ? match.homeTeam : sel === 'draw' ? 'Draw' : match.awayTeam}
-                            </button>
-                          ))}
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          </div>
-        ))}
-
-        <h2 className="font-display text-2xl text-gold tracking-wider mb-4">TOURNAMENT WINNER</h2>
-        <div className="card p-4 mb-6">
-          {data?.results['tw_final'] ? (
-            <p className="text-green-400 font-semibold">✓ Winner set: {data.results['tw_final']}</p>
-          ) : (
-            <div className="grid grid-cols-3 gap-2">
-              {data?.tournamentWinners.map(tw => (
-                <button
-                  key={tw.id}
-                  onClick={() => setResult(tw.id, tw.team, 'Tournament Winner')}
-                  className="p-2 rounded-lg text-sm font-semibold text-pitch text-center"
-                  style={{ background: 'var(--gold)' }}
-                >
-                  {tw.flag} {tw.team}
-                </button>
-              ))}
-            </div>
-          )}
-        </div>
-
-        <h2 className="font-display text-2xl text-gold tracking-wider mb-4">TOP SCORER</h2>
-        <div className="card p-4">
-          <div className="grid grid-cols-2 gap-2">
-            {data?.topScorers.map(ts => {
-              const result = data.results[ts.id];
-              return (
-                <button
-                  key={ts.id}
-                  onClick={() => !result && setResult(ts.id, ts.player, 'Top Scorer')}
-                  disabled={!!result}
-                  className="p-2 rounded-lg text-sm font-semibold text-pitch text-left flex items-center gap-2"
-                  style={{ background: result ? '#4ade80' : 'var(--gold)', opacity: result ? 0.7 : 1 }}
-                >
-                  <span>{ts.flag}</span>
-                  <span className="truncate">{ts.player}</span>
-                </button>
-              );
-            })}
-          </div>
-        </div>
-      </div>
-    </div>
-  );
 }
+
+/* Pitch stripe background */
+.pitch-bg {
+  background:
+    repeating-linear-gradient(
+      90deg,
+      transparent,
+      transparent 80px,
+      rgba(255,255,255,0.012) 80px,
+      rgba(255,255,255,0.012) 160px
+    ),
+    linear-gradient(180deg, var(--pitch) 0%, var(--grass) 100%);
+}
+
+/* Card styles */
+.card {
+  background: var(--card-bg);
+  border: 1px solid var(--card-border);
+  backdrop-filter: blur(8px);
+  border-radius: 12px;
+}
+
+.card-hover {
+  transition: all 0.2s ease;
+}
+.card-hover:hover {
+  background: rgba(255,255,255,0.08);
+  border-color: rgba(245,200,66,0.3);
+  transform: translateY(-2px);
+}
+
+/* Odds badge */
+.odds-badge {
+  font-family: var(--font-display);
+  letter-spacing: 0.05em;
+}
+
+/* Tab styles */
+.tab-active {
+  background: var(--gold);
+  color: var(--pitch);
+}
+
+/* Gold text */
+.text-gold { color: var(--gold); }
+.text-amber { color: var(--amber); }
+.text-chalk { color: var(--chalk); }
+.text-chalk-dim { color: var(--chalk-dim); }
+
+/* Selection highlight */
+.selected-home { border-color: #4ade80 !important; background: rgba(74,222,128,0.12) !important; }
+.selected-draw { border-color: var(--gold) !important; background: rgba(245,200,66,0.12) !important; }
+.selected-away { border-color: #f87171 !important; background: rgba(248,113,113,0.12) !important; }
+.selected-pick { border-color: var(--gold) !important; background: rgba(245,200,66,0.12) !important; }
+
+/* Scrollbar */
+::-webkit-scrollbar { width: 6px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.15); border-radius: 3px; }
+
+/* Input styles */
+input, select {
+  font-family: var(--font-body), sans-serif;
+}
+
+/* Animation utilities */
+@keyframes slideUp {
+  from { opacity: 0; transform: translateY(20px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+@keyframes shimmer {
+  0% { background-position: -200% center; }
+  100% { background-position: 200% center; }
+}
+.animate-slide-up { animation: slideUp 0.4s ease forwards; }
+.animate-fade-in { animation: fadeIn 0.3s ease forwards; }
+
+.gold-shimmer {
+  background: linear-gradient(90deg, var(--gold), #fff8d0, var(--gold));
+  background-size: 200% auto;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  animation: shimmer 3s linear infinite;
+}
+
+/* Bet slip */
+.bet-slip {
+  background: linear-gradient(135deg, #1a2f1e 0%, #0d1f10 100%);
+  border: 1px solid rgba(245,200,66,0.3);
+}
+
+/* Rank medals */
+.rank-1 { color: #ffd700; }
+.rank-2 { color: #c0c0c0; }
+.rank-3 { color: #cd7f32; }
